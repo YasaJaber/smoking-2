@@ -237,6 +237,33 @@ export async function initializeDatabase(): Promise<void> {
           created_at TEXT DEFAULT (datetime('now'))
         );
 
+        -- Standalone warehouse items.
+        -- This stock is intentionally isolated from products/sales inventory.
+        CREATE TABLE IF NOT EXISTS warehouse_items (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          sku TEXT,
+          quantity INTEGER NOT NULL DEFAULT 0,
+          average_cost REAL NOT NULL DEFAULT 0,
+          total_cost REAL NOT NULL DEFAULT 0,
+          note TEXT,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now'))
+        );
+
+        -- Standalone warehouse movement ledger for add/remove operations.
+        CREATE TABLE IF NOT EXISTS warehouse_movements (
+          id TEXT PRIMARY KEY,
+          warehouse_item_id TEXT NOT NULL REFERENCES warehouse_items(id),
+          delta INTEGER NOT NULL,
+          movement_type TEXT NOT NULL CHECK(movement_type IN ('in', 'out')),
+          unit_cost REAL NOT NULL DEFAULT 0,
+          total_cost REAL NOT NULL DEFAULT 0,
+          note TEXT,
+          created_at TEXT DEFAULT (datetime('now'))
+        );
+
         -- Create indexes for performance
         CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
         CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
@@ -253,6 +280,10 @@ export async function initializeDatabase(): Promise<void> {
         CREATE INDEX IF NOT EXISTS idx_audit_events_date ON audit_events(created_at);
         CREATE INDEX IF NOT EXISTS idx_audit_events_entity ON audit_events(entity_type, entity_id);
         CREATE INDEX IF NOT EXISTS idx_daily_closes_date ON daily_closes(date_key);
+        CREATE INDEX IF NOT EXISTS idx_warehouse_items_active ON warehouse_items(is_active);
+        CREATE INDEX IF NOT EXISTS idx_warehouse_items_name ON warehouse_items(name);
+        CREATE INDEX IF NOT EXISTS idx_warehouse_movements_item ON warehouse_movements(warehouse_item_id);
+        CREATE INDEX IF NOT EXISTS idx_warehouse_movements_date ON warehouse_movements(created_at);
 
         -- Insert default settings if not exist
         INSERT OR IGNORE INTO settings (id) VALUES (1);

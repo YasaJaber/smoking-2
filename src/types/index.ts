@@ -222,3 +222,35 @@ export interface DailyCloseSnapshot extends DailyCloseReport {
   created_at: string;
   updated_at: string;
 }
+
+export interface WarehouseItem {
+  id: string;
+  name: string;
+  sku: string | null;
+  quantity: number;
+  average_cost: number;
+  total_cost: number;
+  note: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WarehouseMovement {
+  id: string;
+  warehouse_item_id: string;
+  item_name?: string;
+  delta: number;
+  movement_type: 'in' | 'out';
+  unit_cost: number;
+  total_cost: number;
+  note: string | null;
+  created_at: string;
+}
+
+export interface WarehouseSummary {
+  item_count: number;
+  total_quantity: number;
+  total_value: number;
+  average_price: number;
+}
