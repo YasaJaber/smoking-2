@@ -3,18 +3,22 @@
 // Premium dark theme with aurora gradients
 // ============================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Pressable,
+  TextInput,
+  Alert,
   useWindowDimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BarChart } from 'react-native-gifted-charts';
 import { CurrentDateBadge } from '../../../src/components/common/CurrentDateBadge';
@@ -27,6 +31,7 @@ import {
   getToday,
 } from '../../../src/services/analyticsService';
 import { useSettingsStore } from '../../../src/stores/settingsStore';
+import { useAuthStore } from '../../../src/stores/authStore';
 import { formatCurrency, formatCompact } from '../../../src/utils/formatters';
 import { Colors, Gradients, Typography, Spacing, BorderRadius } from '../../../src/constants/theme';
 import type { AnalyticsSummary, DailySales, TopProduct } from '../../../src/types';
@@ -37,19 +42,37 @@ export default function AnalyticsScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isCompact = width < 768;
-  const darkMode = useSettingsStore((s) => s.settings.dark_mode);
-  const colors = darkMode ? Colors.dark : Colors.light;
-  const currency = useSettingsStore((s) => s.settings.currency);
+  const settings = useSettingsStore((s) => s.settings);
+  const user = useAuthStore((s) => s.user);
+  const colors = settings.dark_mode ? Colors.dark : Colors.light;
+  const currency = settings.currency;
 
   const [period, setPeriod] = useState<Period>('week');
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [dailySales, setDailySales] = useState<DailySales[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [outstanding, setOutstanding] = useState(0);
+  const [analyticsPin, setAnalyticsPin] = useState('');
+  const [isAnalyticsUnlocked, setIsAnalyticsUnlocked] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setIsAnalyticsUnlocked(false);
+        setAnalyticsPin('');
+        setSummary(null);
+        setDailySales([]);
+        setTopProducts([]);
+        setOutstanding(0);
+      };
+    }, [])
+  );
 
   useEffect(() => {
-    loadData();
-  }, [period]);
+    if (isAnalyticsUnlocked) {
+      loadData();
+    }
+  }, [period, isAnalyticsUnlocked]);
 
   const getDateRange = (p: Period): [string, string] => {
     const today = getToday();
@@ -75,6 +98,26 @@ export default function AnalyticsScreen() {
     setOutstanding(outstandingData);
   };
 
+  const handleUnlockAnalytics = () => {
+    const savedAnalyticsPin = settings.analytics_pin || user?.pin || '';
+
+    if (!/^\d{4}$/.test(analyticsPin)) {
+      Alert.alert('تنبيه', 'رمز الإحصائيات يجب أن يكون 4 أرقام');
+      return;
+    }
+
+    if (analyticsPin !== savedAnalyticsPin) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('رمز غير صحيح', 'رمز الإحصائيات غير صحيح');
+      setAnalyticsPin('');
+      return;
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setAnalyticsPin('');
+    setIsAnalyticsUnlocked(true);
+  };
+
   const chartData = dailySales.map((d) => ({
     value: d.revenue,
     label: d.date.slice(5), // MM-DD
@@ -91,6 +134,57 @@ export default function AnalyticsScreen() {
     { key: 'all', label: 'الكل' },
   ];
   const chartWidth = Math.max(240, Math.min(width - Spacing.base * 4, isCompact ? width - Spacing.base * 4 : 440));
+
+  if (!isAnalyticsUnlocked) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <View style={styles.headerTitleGroup}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>الإحصائيات</Text>
+            <CurrentDateBadge />
+          </View>
+        </View>
+
+        <View style={styles.lockWrap}>
+          <Animated.View
+            entering={FadeInDown.duration(300)}
+            style={[styles.lockCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <LinearGradient
+              colors={['rgba(99,102,241,0.18)', 'rgba(16,185,129,0.08)']}
+              style={styles.lockIcon}
+            >
+              <MaterialCommunityIcons name="shield-lock" size={34} color={colors.primary} />
+            </LinearGradient>
+            <Text style={[styles.lockTitle, { color: colors.text }]}>الإحصائيات مقفولة</Text>
+            <TextInput
+              style={[styles.lockInput, { backgroundColor: colors.surfaceLight, borderColor: colors.border, color: colors.text }]}
+              value={analyticsPin}
+              onChangeText={setAnalyticsPin}
+              keyboardType="number-pad"
+              maxLength={4}
+              secureTextEntry
+              textContentType="password"
+              placeholder="••••"
+              placeholderTextColor={colors.textMuted}
+              onSubmitEditing={handleUnlockAnalytics}
+            />
+            <Pressable onPress={handleUnlockAnalytics} style={styles.unlockPressable}>
+              <LinearGradient
+                colors={Gradients.primary as unknown as readonly [string, string, ...string[]]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.unlockBtn}
+              >
+                <MaterialCommunityIcons name="lock-open-variant" size={18} color="#fff" />
+                <Text style={styles.unlockBtnText}>فتح الإحصائيات</Text>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -299,6 +393,51 @@ const styles = StyleSheet.create({
   },
   headerTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flexWrap: 'wrap' },
   headerTitle: { fontSize: Typography.fontSize.lg, fontWeight: '700' },
+  lockWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.base,
+  },
+  lockCard: {
+    width: '100%',
+    maxWidth: 420,
+    alignItems: 'center',
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    padding: Spacing.xl,
+    gap: Spacing.base,
+  },
+  lockIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockTitle: { fontSize: Typography.fontSize.lg, fontWeight: '800' },
+  lockInput: {
+    width: 160,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: '800',
+    letterSpacing: 8,
+    textAlign: 'center',
+  },
+  unlockPressable: { width: '100%' },
+  unlockBtn: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.base,
+  },
+  unlockBtnText: { color: '#fff', fontSize: Typography.fontSize.sm, fontWeight: '800' },
   periodTabs: { flexDirection: 'row', gap: Spacing.xs, flexWrap: 'wrap' },
   periodTab: {
     paddingHorizontal: Spacing.md,

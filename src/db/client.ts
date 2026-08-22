@@ -60,6 +60,7 @@ export async function initializeDatabase(): Promise<void> {
           low_stock_threshold INTEGER DEFAULT 5,
           server_url TEXT DEFAULT 'https://new-place.vercel.app',
           sync_token TEXT DEFAULT '',
+          analytics_pin TEXT DEFAULT '',
           created_at TEXT DEFAULT (datetime('now')),
           updated_at TEXT DEFAULT (datetime('now'))
         );
@@ -276,6 +277,7 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
   const safeAlters = [
     "ALTER TABLE settings ADD COLUMN server_url TEXT DEFAULT ''",
     "ALTER TABLE settings ADD COLUMN sync_token TEXT DEFAULT ''",
+    "ALTER TABLE settings ADD COLUMN analytics_pin TEXT DEFAULT ''",
     "ALTER TABLE invoices ADD COLUMN invoice_code TEXT",
     "ALTER TABLE invoices ADD COLUMN invoice_name TEXT",
     "ALTER TABLE invoices ADD COLUMN invoice_type TEXT DEFAULT 'sale'",
@@ -312,6 +314,18 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
     "UPDATE settings SET sync_token = ? WHERE id = 1 AND (sync_token IS NULL OR trim(sync_token) = '') AND ? <> ''",
     [DEFAULT_SYNC_TOKEN, DEFAULT_SYNC_TOKEN]
   );
+
+  await database.runAsync(`
+    UPDATE settings
+    SET analytics_pin = COALESCE((
+      SELECT pin
+      FROM users
+      WHERE role = 'admin' AND is_active = 1
+      ORDER BY created_at ASC
+      LIMIT 1
+    ), '')
+    WHERE id = 1 AND (analytics_pin IS NULL OR trim(analytics_pin) = '')
+  `);
 
   await migrateInvoiceItemsNullableProductId(database);
   await migrateInvoiceCodes(database);

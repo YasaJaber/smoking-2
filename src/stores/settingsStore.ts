@@ -30,6 +30,7 @@ const defaultSettings: Settings = {
   low_stock_threshold: 5,
   server_url: DEFAULT_SERVER_URL,
   sync_token: DEFAULT_SYNC_TOKEN,
+  analytics_pin: '',
   created_at: '',
   updated_at: '',
 };

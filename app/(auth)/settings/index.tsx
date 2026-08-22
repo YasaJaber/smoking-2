@@ -104,6 +104,10 @@ export default function SettingsScreen() {
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [isChangingPin, setIsChangingPin] = useState(false);
+  const [currentAnalyticsPin, setCurrentAnalyticsPin] = useState('');
+  const [newAnalyticsPin, setNewAnalyticsPin] = useState('');
+  const [confirmAnalyticsPin, setConfirmAnalyticsPin] = useState('');
+  const [isChangingAnalyticsPin, setIsChangingAnalyticsPin] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
 
   const handleSave = async () => {
@@ -180,6 +184,50 @@ export default function SettingsScreen() {
       Alert.alert('تعذر تغيير الرمز', err instanceof Error ? err.message : 'حاول مرة أخرى');
     } finally {
       setIsChangingPin(false);
+    }
+  };
+
+  const handleChangeAnalyticsPin = async () => {
+    const pinPattern = /^\d{4}$/;
+    const savedAnalyticsPin = settings.analytics_pin || user?.pin || '';
+
+    if (
+      !pinPattern.test(currentAnalyticsPin) ||
+      !pinPattern.test(newAnalyticsPin) ||
+      !pinPattern.test(confirmAnalyticsPin)
+    ) {
+      Alert.alert('تنبيه', 'رمز الإحصائيات يجب أن يكون 4 أرقام');
+      return;
+    }
+
+    if (currentAnalyticsPin !== savedAnalyticsPin) {
+      Alert.alert('تنبيه', 'رمز الإحصائيات الحالي غير صحيح');
+      return;
+    }
+
+    if (newAnalyticsPin !== confirmAnalyticsPin) {
+      Alert.alert('تنبيه', 'تأكيد رمز الإحصائيات غير مطابق');
+      return;
+    }
+
+    if (newAnalyticsPin === currentAnalyticsPin) {
+      Alert.alert('تنبيه', 'اكتب رمز إحصائيات جديد مختلف عن الحالي');
+      return;
+    }
+
+    setIsChangingAnalyticsPin(true);
+    try {
+      await updateSettings({ analytics_pin: newAnalyticsPin });
+      setCurrentAnalyticsPin('');
+      setNewAnalyticsPin('');
+      setConfirmAnalyticsPin('');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('✅', 'تم تغيير رمز الإحصائيات بنجاح');
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('تعذر تغيير الرمز', 'لم يتم حفظ رمز الإحصائيات. حاول مرة أخرى.');
+    } finally {
+      setIsChangingAnalyticsPin(false);
     }
   };
 
@@ -385,6 +433,62 @@ export default function SettingsScreen() {
                 />
                 <Text style={[styles.securityBtnText, { color: isChangingPin ? colors.textMuted : '#fff' }]}>
                   {isChangingPin ? 'جاري التغيير...' : 'تغيير رمز الدخول'}
+                </Text>
+              </Pressable>
+
+              <View style={[styles.securityDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.securitySubhead}>
+                <MaterialCommunityIcons name="chart-bar" size={18} color={colors.primary} />
+                <Text style={[styles.securitySubheadText, { color: colors.text }]}>رمز الإحصائيات</Text>
+              </View>
+              <SettingRow label="الرمز الحالي" colors={colors}>
+                <TextInput
+                  style={[styles.input, styles.pinInput, { backgroundColor: colors.surfaceLight, borderColor: colors.border, color: colors.text }]}
+                  value={currentAnalyticsPin}
+                  onChangeText={setCurrentAnalyticsPin}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  secureTextEntry
+                  textContentType="password"
+                />
+              </SettingRow>
+              <SettingRow label="الرمز الجديد" colors={colors}>
+                <TextInput
+                  style={[styles.input, styles.pinInput, { backgroundColor: colors.surfaceLight, borderColor: colors.border, color: colors.text }]}
+                  value={newAnalyticsPin}
+                  onChangeText={setNewAnalyticsPin}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  secureTextEntry
+                  textContentType="newPassword"
+                />
+              </SettingRow>
+              <SettingRow label="تأكيد رمز الإحصائيات" colors={colors}>
+                <TextInput
+                  style={[styles.input, styles.pinInput, { backgroundColor: colors.surfaceLight, borderColor: colors.border, color: colors.text }]}
+                  value={confirmAnalyticsPin}
+                  onChangeText={setConfirmAnalyticsPin}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  secureTextEntry
+                  textContentType="newPassword"
+                />
+              </SettingRow>
+              <Pressable
+                onPress={handleChangeAnalyticsPin}
+                disabled={isChangingAnalyticsPin}
+                style={[
+                  styles.securityBtn,
+                  { backgroundColor: isChangingAnalyticsPin ? colors.surfaceLight : colors.primary },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name={isChangingAnalyticsPin ? 'lock-clock' : 'lock-reset'}
+                  size={18}
+                  color={isChangingAnalyticsPin ? colors.textMuted : '#fff'}
+                />
+                <Text style={[styles.securityBtnText, { color: isChangingAnalyticsPin ? colors.textMuted : '#fff' }]}>
+                  {isChangingAnalyticsPin ? 'جاري التغيير...' : 'تغيير رمز الإحصائيات'}
                 </Text>
               </Pressable>
             </SettingSection>
@@ -640,6 +744,20 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
   },
   securityBtnText: { fontSize: Typography.fontSize.sm, fontWeight: '700' },
+  securityDivider: {
+    height: 1,
+    marginHorizontal: Spacing.base,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.base,
+  },
+  securitySubhead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.base,
+    paddingBottom: Spacing.xs,
+  },
+  securitySubheadText: { fontSize: Typography.fontSize.sm, fontWeight: '800' },
   syncStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',

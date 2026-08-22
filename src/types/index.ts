@@ -18,6 +18,7 @@ export interface Settings {
   low_stock_threshold: number;
   server_url: string;
   sync_token: string;
+  analytics_pin: string;
   created_at: string;
   updated_at: string;
 }

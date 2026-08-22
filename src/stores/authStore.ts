@@ -69,6 +69,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         );
       }
 
+      await db.runAsync(
+        "UPDATE settings SET analytics_pin = ? WHERE id = 1 AND (analytics_pin IS NULL OR trim(analytics_pin) = '')",
+        [adminPin]
+      );
+
       await db.execAsync('COMMIT');
     } catch (error) {
       await db.execAsync('ROLLBACK');
