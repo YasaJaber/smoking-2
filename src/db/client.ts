@@ -46,7 +46,7 @@ export async function initializeDatabase(): Promise<void> {
         -- Settings table
         CREATE TABLE IF NOT EXISTS settings (
           id INTEGER PRIMARY KEY DEFAULT 1,
-          store_name TEXT DEFAULT 'smoking',
+          store_name TEXT DEFAULT 'New Place',
           phone TEXT DEFAULT '',
           logo_uri TEXT DEFAULT '',
           tax_enabled INTEGER DEFAULT 0,
@@ -58,7 +58,7 @@ export async function initializeDatabase(): Promise<void> {
           footer_message TEXT DEFAULT 'شكراً لزيارتكم',
           currency TEXT DEFAULT 'EGP',
           low_stock_threshold INTEGER DEFAULT 5,
-          server_url TEXT DEFAULT 'https://smoking-theta.vercel.app',
+          server_url TEXT DEFAULT 'https://new-place.vercel.app',
           sync_token TEXT DEFAULT '',
           created_at TEXT DEFAULT (datetime('now')),
           updated_at TEXT DEFAULT (datetime('now'))
@@ -299,7 +299,7 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
   }
 
   await database.runAsync(
-    "UPDATE settings SET store_name = 'smoking' WHERE store_name = ?",
+    "UPDATE settings SET store_name = 'New Place' WHERE store_name = ?",
     ['محل المدخنات']
   );
 

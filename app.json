@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Smoking POS",
-    "slug": "smoking-pos",
+    "name": "New Place POS",
+    "slug": "new-place-pos",
     "version": "1.0.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "scheme": "smoking-pos",
+    "scheme": "new-place-pos",
     "ios": {
       "supportsTablet": true
     },
@@ -17,7 +17,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.smokingpos.app",
+      "package": "com.newplacepos.app",
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",

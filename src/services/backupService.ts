@@ -34,7 +34,7 @@ async function getBackupDirectory(): Promise<string> {
 export async function createDatabaseBackup(userId?: string | null): Promise<BackupResult> {
   const source = await getDatabase();
   const backupDir = await getBackupDirectory();
-  const name = `smoking-pos-${timestamp()}.db`;
+  const name = `new-place-pos-${timestamp()}.db`;
   const dest = await SQLite.openDatabaseAsync(name, { useNewConnection: true }, backupDir);
 
   try {
@@ -66,7 +66,7 @@ export async function shareDatabaseBackup(userId?: string | null): Promise<Backu
   if (available) {
     await Sharing.shareAsync(backup.uri, {
       mimeType: 'application/vnd.sqlite3',
-      dialogTitle: 'تصدير قاعدة بيانات Smoking POS',
+      dialogTitle: 'تصدير قاعدة بيانات New Place POS',
       UTI: 'public.database',
     });
   }

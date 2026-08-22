@@ -1,7 +1,7 @@
 {
-  "name": "smoking-pos-server",
+  "name": "new-place-pos-server",
   "version": "1.0.0",
-  "description": "Central sync server (Vercel serverless + MongoDB Atlas) for the Smoking POS app",
+  "description": "Central sync server (Vercel serverless + MongoDB Atlas) for the New Place POS app",
   "private": true,
   "scripts": {
     "test:local": "node local.js",

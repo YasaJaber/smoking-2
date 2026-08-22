@@ -1,5 +1,5 @@
 // ============================================================
-// Type Definitions - Smoking POS
+// Type Definitions - New Place POS
 // ============================================================
 
 export interface Settings {

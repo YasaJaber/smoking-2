@@ -30,6 +30,7 @@ import Animated, {
   FadeInUp,
 } from 'react-native-reanimated';
 import { useAuthStore } from '../src/stores/authStore';
+import { APP_CONFIG } from '../src/constants/config';
 import { Colors, Gradients, Typography, Spacing, BorderRadius } from '../src/constants/theme';
 
 const PIN_LENGTH = 4;
@@ -172,7 +173,7 @@ export default function LoginScreen() {
               <MaterialCommunityIcons name="store" size={48} color="#fff" />
             </LinearGradient>
           </View>
-          <Text style={[styles.appName, { color: colors.text }]}>Smoking POS</Text>
+          <Text style={[styles.appName, { color: colors.text }]}>{APP_CONFIG.name}</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             نظام إدارة نقاط البيع
           </Text>

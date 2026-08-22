@@ -1,5 +1,5 @@
 // ============================================================
-// Design System - Smoking POS
+// Design System - New Place POS
 // Premium Dark Theme with Glassmorphism & Aurora Effects
 // ============================================================
 

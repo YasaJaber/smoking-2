@@ -1,4 +1,4 @@
-# Smoking POS - Sync Server (Vercel + MongoDB Atlas)
+# New Place POS - Sync Server (Vercel + MongoDB Atlas)
 
 Central API that keeps every tablet/phone in sync against a **MongoDB Atlas**
 cloud database, deployed as **free Vercel serverless functions**. Each device
@@ -29,7 +29,7 @@ cashier never waits.
 3. Set **Root Directory** to `server`.
 4. Add Environment Variables:
    - `MONGODB_URI` = your Atlas connection string
-   - `MONGODB_DB` = `smoking_pos` (optional)
+   - `MONGODB_DB` = `new_place_pos` (optional)
    - `SYNC_TOKEN` = a long random token used by the app in the `x-sync-token` header
 5. **Deploy**. You get a URL like `https://your-project.vercel.app`.
 

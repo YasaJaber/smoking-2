@@ -145,7 +145,7 @@ function lanAddresses() {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log('\n=== Smoking POS LOCAL TEST server (in-memory DB) ===');
+  console.log('\n=== New Place POS LOCAL TEST server (in-memory DB) ===');
   console.log(`Listening on http://localhost:${PORT}`);
   const ips = lanAddresses();
   if (ips.length) {

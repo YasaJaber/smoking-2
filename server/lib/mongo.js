@@ -11,7 +11,7 @@ require('dotenv').config();
 const { MongoClient } = require('mongodb');
 
 const URI = process.env.MONGODB_URI;
-const DB_NAME = process.env.MONGODB_DB || 'smoking_pos';
+const DB_NAME = process.env.MONGODB_DB || 'new_place_pos';
 
 const OPTIONS = {
   maxPoolSize: 5,

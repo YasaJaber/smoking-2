@@ -25,7 +25,7 @@ import { useAuthStore } from '../../../src/stores/authStore';
 import { useSyncStore } from '../../../src/stores/syncStore';
 import { CurrentDateBadge } from '../../../src/components/common/CurrentDateBadge';
 import { formatDateTime } from '../../../src/utils/formatters';
-import { DEFAULT_SERVER_URL, DEFAULT_SYNC_TOKEN } from '../../../src/constants/config';
+import { APP_CONFIG, DEFAULT_SERVER_URL, DEFAULT_SYNC_TOKEN } from '../../../src/constants/config';
 import { Colors, Gradients, Typography, Spacing, BorderRadius } from '../../../src/constants/theme';
 import { router } from 'expo-router';
 import {
@@ -552,7 +552,7 @@ export default function SettingsScreen() {
         {/* App Info */}
         <View style={styles.appInfo}>
           <Text style={[styles.appInfoText, { color: colors.textMuted }]}>
-            Smoking POS v1.0.0 • developed by{' '}
+            {APP_CONFIG.name} v{APP_CONFIG.version} • developed by{' '}
             <Text
               style={[styles.appInfoLink, { color: colors.primary }]}
               onPress={() => Linking.openURL('https://www.linkedin.com/in/yasa-jaber/')}

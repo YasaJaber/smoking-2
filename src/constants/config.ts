@@ -1,9 +1,9 @@
 // ============================================================
-// App Configuration - Smoking POS
+// App Configuration - New Place POS
 // ============================================================
 
 export const APP_CONFIG = {
-  name: 'Smoking POS',
+  name: 'New Place POS',
   version: '1.0.0',
   defaultCurrency: 'EGP',
   defaultTaxRate: 0.14,
@@ -21,11 +21,11 @@ export const STORAGE_KEYS = {
   theme: 'theme_mode',
 } as const;
 
-export const DB_NAME = 'smoking_pos.db';
+export const DB_NAME = 'new_place_pos.db';
 
 export const DEFAULT_SERVER_URL =
-  process.env.EXPO_PUBLIC_SYNC_SERVER_URL || 'https://smoking-theta.vercel.app';
+  process.env.EXPO_PUBLIC_SYNC_SERVER_URL || 'https://new-place.vercel.app';
 
 export const DEFAULT_SYNC_TOKEN =
   process.env.EXPO_PUBLIC_SYNC_TOKEN ||
-  '1e3eaecdb3b561bc86760dc9fd4f4ed7c0e95fd022aeb21149098998d0768e3a';
+  'dfffde6eebdf54036df3594be03695d9f8878ca4c037715e58e12b9566be8a04';
