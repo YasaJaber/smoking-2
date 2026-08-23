@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "New Place POS",
-    "slug": "new-place-pos",
+    "slug": "smoking-pos",
     "version": "1.0.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
