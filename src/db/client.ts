@@ -58,7 +58,7 @@ export async function initializeDatabase(): Promise<void> {
           footer_message TEXT DEFAULT 'شكراً لزيارتكم',
           currency TEXT DEFAULT 'EGP',
           low_stock_threshold INTEGER DEFAULT 5,
-          server_url TEXT DEFAULT 'https://new-place.vercel.app',
+          server_url TEXT DEFAULT 'https://smoking-2.vercel.app',
           sync_token TEXT DEFAULT '',
           analytics_pin TEXT DEFAULT '',
           created_at TEXT DEFAULT (datetime('now')),
@@ -350,6 +350,11 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.runAsync(
     "UPDATE settings SET server_url = ? WHERE id = 1 AND (server_url IS NULL OR trim(server_url) = '')",
     [DEFAULT_SERVER_URL]
+  );
+
+  await database.runAsync(
+    "UPDATE settings SET server_url = ? WHERE id = 1 AND trim(server_url) = ?",
+    [DEFAULT_SERVER_URL, 'https://new-place.vercel.app']
   );
 
   await database.runAsync(

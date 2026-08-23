@@ -24,7 +24,7 @@ export const STORAGE_KEYS = {
 export const DB_NAME = 'new_place_pos.db';
 
 export const DEFAULT_SERVER_URL =
-  process.env.EXPO_PUBLIC_SYNC_SERVER_URL || 'https://new-place.vercel.app';
+  process.env.EXPO_PUBLIC_SYNC_SERVER_URL || 'https://smoking-2.vercel.app';
 
 export const DEFAULT_SYNC_TOKEN =
   process.env.EXPO_PUBLIC_SYNC_TOKEN ||
