@@ -4,7 +4,7 @@ Central API that keeps every tablet/phone in sync against a **MongoDB Atlas**
 cloud database, deployed as **free Vercel serverless functions**. Each device
 works fully offline on its own local SQLite DB and, whenever the internet is
 back, pushes its local changes and pulls everyone else's — so any device that
-logs in sees the same products, stock and sales.
+logs in sees the same products, stock, standalone warehouse and sales.
 
 ```
 Phone (SQLite, offline-first)  --HTTP /api/sync-->  Vercel function  <-->  MongoDB Atlas (cloud)
@@ -95,8 +95,9 @@ npm run dev            # runs `vercel dev` on http://localhost:3000
 
 ## Notes
 
-- Conflicts on products/categories are resolved **Last-Write-Wins** by
-  `updated_at`. Invoices are append-only.
+- Conflicts on products/categories/purchases/warehouse item metadata are
+  resolved **Last-Write-Wins** by `updated_at`. Invoices and movement ledgers
+  are append-only.
 - Collections are created automatically on first sync, with a unique index on
   `id`. The Mongo connection is cached across warm invocations and uses a small
   pool to respect Atlas free-tier connection limits.

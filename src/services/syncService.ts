@@ -32,6 +32,8 @@ interface SyncPayload {
     purchases?: any[];
     purchase_items?: any[];
     inventory_movements?: any[];
+    warehouse_items?: any[];
+    warehouse_movements?: any[];
   };
 }
 
@@ -43,6 +45,8 @@ const TABLE_COLUMNS: Record<string, string[]> = {
   purchases: ['id', 'budget', 'spent', 'remaining', 'note', 'status', 'is_deleted', 'synced', 'created_at', 'updated_at'],
   purchase_items: ['id', 'purchase_id', 'product_id', 'product_name', 'category_id', 'cost_price', 'sell_price', 'quantity', 'total_cost', 'is_deleted', 'synced', 'created_at'],
   inventory_movements: ['id', 'product_id', 'delta', 'reason', 'reference_type', 'reference_id', 'note', 'synced', 'applied', 'created_at'],
+  warehouse_items: ['id', 'name', 'sku', 'note', 'is_active', 'synced', 'created_at', 'updated_at'],
+  warehouse_movements: ['id', 'warehouse_item_id', 'delta', 'movement_type', 'unit_cost', 'total_cost', 'note', 'synced', 'applied', 'created_at'],
 };
 
 /**
@@ -139,7 +143,25 @@ async function collectLocalChanges() {
     `SELECT ${TABLE_COLUMNS.inventory_movements.join(', ')} FROM inventory_movements WHERE synced = 0`
   );
 
-  return { categories, products, invoices, invoice_items, purchases, purchase_items, inventory_movements };
+  const warehouse_items = await db.getAllAsync<any>(
+    `SELECT ${TABLE_COLUMNS.warehouse_items.join(', ')} FROM warehouse_items WHERE synced = 0`
+  );
+
+  const warehouse_movements = await db.getAllAsync<any>(
+    `SELECT ${TABLE_COLUMNS.warehouse_movements.join(', ')} FROM warehouse_movements WHERE synced = 0`
+  );
+
+  return {
+    categories,
+    products,
+    invoices,
+    invoice_items,
+    purchases,
+    purchase_items,
+    inventory_movements,
+    warehouse_items,
+    warehouse_movements,
+  };
 }
 
 /**
@@ -197,6 +219,33 @@ async function applyPulledInventoryMovements(rows: any[]): Promise<void> {
   }
 }
 
+/**
+ * Insert pulled warehouse deltas and apply each new movement exactly once.
+ * Warehouse item balances are materialized locally from this ledger, so two
+ * devices can add/remove stock offline without clobbering each other's totals.
+ */
+async function applyPulledWarehouseMovements(rows: any[]): Promise<void> {
+  if (!rows || rows.length === 0) return;
+  const db = await getDatabase();
+  const columns = TABLE_COLUMNS.warehouse_movements;
+  const placeholders = columns.map(() => '?').join(', ');
+
+  for (const row of rows) {
+    const values = columns.map((c) => {
+      if (c === 'synced') return 1;
+      if (c === 'applied') return 0;
+      return row[c] === undefined ? null : row[c];
+    });
+
+    await db.runAsync(
+      `INSERT OR IGNORE INTO warehouse_movements (${columns.join(', ')}) VALUES (${placeholders})`,
+      values
+    );
+
+    await applyPendingWarehouseMovement(row.id);
+  }
+}
+
 async function applyPendingInventoryMovement(id: string): Promise<void> {
   const db = await getDatabase();
   const movement = await db.getFirstAsync<{ id: string; product_id: string; delta: number; applied: number }>(
@@ -219,6 +268,67 @@ async function applyPendingInventoryMovement(id: string): Promise<void> {
 
     await db.runAsync(
       'UPDATE inventory_movements SET applied = 1 WHERE id = ?',
+      [movement.id]
+    );
+    await db.execAsync('COMMIT');
+  } catch (error) {
+    await db.execAsync('ROLLBACK');
+    throw error;
+  }
+}
+
+async function applyPendingWarehouseMovement(id: string): Promise<void> {
+  const db = await getDatabase();
+  const movement = await db.getFirstAsync<{
+    id: string;
+    warehouse_item_id: string;
+    delta: number;
+    movement_type: 'in' | 'out';
+    unit_cost: number;
+    applied: number;
+  }>(
+    'SELECT id, warehouse_item_id, delta, movement_type, unit_cost, applied FROM warehouse_movements WHERE id = ?',
+    [id]
+  );
+
+  if (!movement || movement.applied) return;
+
+  await db.execAsync('BEGIN TRANSACTION');
+  try {
+    const item = await db.getFirstAsync<{
+      id: string;
+      quantity: number;
+      average_cost: number;
+    }>(
+      'SELECT id, quantity, average_cost FROM warehouse_items WHERE id = ?',
+      [movement.warehouse_item_id]
+    );
+
+    if (!item) {
+      throw new Error(`WAREHOUSE_ITEM_NOT_FOUND_FOR_MOVEMENT:${movement.warehouse_item_id}`);
+    }
+
+    const delta = Number(movement.delta) || 0;
+    const nextQuantity = Math.max(0, item.quantity + delta);
+    let nextAverage = item.average_cost;
+
+    if (movement.movement_type === 'in' && delta > 0) {
+      const currentValue = item.quantity * item.average_cost;
+      const addedValue = delta * (Number(movement.unit_cost) || 0);
+      nextAverage = nextQuantity > 0 ? (currentValue + addedValue) / nextQuantity : 0;
+    }
+
+    const nextTotal = nextQuantity * nextAverage;
+
+    await db.runAsync(
+      `UPDATE warehouse_items
+       SET quantity = ?, average_cost = ?, total_cost = ?, updated_at = ?
+       WHERE id = ?`,
+      [nextQuantity, nextAverage, nextTotal, new Date().toISOString(), movement.warehouse_item_id]
+    );
+
+    await db.runAsync(
+      'UPDATE warehouse_movements SET applied = 1 WHERE id = ?',
       [movement.id]
     );
     await db.execAsync('COMMIT');
@@ -270,7 +380,9 @@ async function syncNowUnlocked(): Promise<SyncResult> {
     local.invoice_items.length +
     local.purchases.length +
     local.purchase_items.length +
-    local.inventory_movements.length;
+    local.inventory_movements.length +
+    local.warehouse_items.length +
+    local.warehouse_movements.length;
 
   const response = await fetchWithTimeout(`${base}${SYNC_PATH}`, {
     method: 'POST',
@@ -299,7 +411,9 @@ async function syncNowUnlocked(): Promise<SyncResult> {
   await applyPulledRows('invoice_items', remote.invoice_items || []);
   await applyPulledRows('purchases', remote.purchases || []);
   await applyPulledRows('purchase_items', remote.purchase_items || []);
+  await applyPulledRows('warehouse_items', remote.warehouse_items || []);
   await applyPulledInventoryMovements(remote.inventory_movements || []);
+  await applyPulledWarehouseMovements(remote.warehouse_movements || []);
 
   // Mark our pushed rows as synced.
   await markSynced('categories', local.categories.map((r) => r.id));
@@ -308,6 +422,8 @@ async function syncNowUnlocked(): Promise<SyncResult> {
   await markSynced('inventory_movements', local.inventory_movements.map((r) => r.id));
   await markSynced('purchases', local.purchases.map((r) => r.id));
   await markSynced('purchase_items', local.purchase_items.map((r) => r.id));
+  await markSynced('warehouse_items', local.warehouse_items.map((r) => r.id));
+  await markSynced('warehouse_movements', local.warehouse_movements.map((r) => r.id));
 
   // Advance the sync cursor.
   await setMeta('last_sync', String(payload.serverTime));
@@ -320,7 +436,9 @@ async function syncNowUnlocked(): Promise<SyncResult> {
     (remote.invoice_items?.length || 0) +
     (remote.purchases?.length || 0) +
     (remote.purchase_items?.length || 0) +
-    (remote.inventory_movements?.length || 0);
+    (remote.inventory_movements?.length || 0) +
+    (remote.warehouse_items?.length || 0) +
+    (remote.warehouse_movements?.length || 0);
 
   return { pushed: pushedCount, pulled: pulledCount, serverTime: payload.serverTime };
 }
@@ -337,7 +455,9 @@ export async function getPendingChangesCount(): Promise<number> {
       (SELECT COUNT(*) FROM invoices WHERE synced = 0) +
       (SELECT COUNT(*) FROM inventory_movements WHERE synced = 0) +
       (SELECT COUNT(*) FROM purchases WHERE synced = 0) +
-      (SELECT COUNT(*) FROM purchase_items WHERE synced = 0) AS count`
+      (SELECT COUNT(*) FROM purchase_items WHERE synced = 0) +
+      (SELECT COUNT(*) FROM warehouse_items WHERE synced = 0) +
+      (SELECT COUNT(*) FROM warehouse_movements WHERE synced = 0) AS count`
   );
   return result?.count || 0;
 }

@@ -232,6 +232,7 @@ export interface WarehouseItem {
   total_cost: number;
   note: string | null;
   is_active: boolean;
+  synced: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -245,6 +246,8 @@ export interface WarehouseMovement {
   unit_cost: number;
   total_cost: number;
   note: string | null;
+  synced: boolean;
+  applied: boolean;
   created_at: string;
 }
 

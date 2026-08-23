@@ -248,6 +248,7 @@ export async function initializeDatabase(): Promise<void> {
           total_cost REAL NOT NULL DEFAULT 0,
           note TEXT,
           is_active INTEGER DEFAULT 1,
+          synced INTEGER DEFAULT 0,
           created_at TEXT DEFAULT (datetime('now')),
           updated_at TEXT DEFAULT (datetime('now'))
         );
@@ -261,6 +262,8 @@ export async function initializeDatabase(): Promise<void> {
           unit_cost REAL NOT NULL DEFAULT 0,
           total_cost REAL NOT NULL DEFAULT 0,
           note TEXT,
+          synced INTEGER DEFAULT 0,
+          applied INTEGER DEFAULT 1,
           created_at TEXT DEFAULT (datetime('now'))
         );
 
@@ -321,6 +324,9 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
     "ALTER TABLE purchases ADD COLUMN is_deleted INTEGER DEFAULT 0",
     "ALTER TABLE purchase_items ADD COLUMN synced INTEGER DEFAULT 0",
     "ALTER TABLE purchase_items ADD COLUMN is_deleted INTEGER DEFAULT 0",
+    "ALTER TABLE warehouse_items ADD COLUMN synced INTEGER DEFAULT 0",
+    "ALTER TABLE warehouse_movements ADD COLUMN synced INTEGER DEFAULT 0",
+    "ALTER TABLE warehouse_movements ADD COLUMN applied INTEGER DEFAULT 1",
   ];
 
   for (const sql of safeAlters) {
@@ -330,6 +336,11 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       // Column already exists - ignore
     }
   }
+
+  await database.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_warehouse_items_synced ON warehouse_items(synced);
+    CREATE INDEX IF NOT EXISTS idx_warehouse_movements_synced ON warehouse_movements(synced);
+  `);
 
   await database.runAsync(
     "UPDATE settings SET store_name = 'New Place' WHERE store_name = ?",

@@ -36,6 +36,8 @@ async function clearPreProductionData(): Promise<void> {
       (SELECT COUNT(*) FROM purchases) +
       (SELECT COUNT(*) FROM purchase_items) +
       (SELECT COUNT(*) FROM inventory_movements) +
+      (SELECT COUNT(*) FROM warehouse_items) +
+      (SELECT COUNT(*) FROM warehouse_movements) +
       (SELECT COUNT(*) FROM users) AS count`
   );
 
@@ -53,6 +55,8 @@ async function clearPreProductionData(): Promise<void> {
     await db.runAsync('DELETE FROM purchase_items');
     await db.runAsync('DELETE FROM purchases');
     await db.runAsync('DELETE FROM inventory_movements');
+    await db.runAsync('DELETE FROM warehouse_movements');
+    await db.runAsync('DELETE FROM warehouse_items');
     await db.runAsync('DELETE FROM products');
     await db.runAsync('DELETE FROM categories');
     await db.runAsync('DELETE FROM sync_log');

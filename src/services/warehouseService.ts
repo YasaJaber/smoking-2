@@ -127,16 +127,16 @@ export async function createWarehouseItem(data: WarehouseItemInput): Promise<War
     try {
       await db.runAsync(
         `INSERT INTO warehouse_items
-          (id, name, sku, quantity, average_cost, total_cost, note, is_active, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+          (id, name, sku, quantity, average_cost, total_cost, note, is_active, synced, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)`,
         [id, name, sku, quantity, unitCost, totalCost, note, now, now]
       );
 
       if (quantity > 0) {
         await db.runAsync(
           `INSERT INTO warehouse_movements
-            (id, warehouse_item_id, delta, movement_type, unit_cost, total_cost, note, created_at)
-           VALUES (?, ?, ?, 'in', ?, ?, ?, ?)`,
+            (id, warehouse_item_id, delta, movement_type, unit_cost, total_cost, note, synced, applied, created_at)
+           VALUES (?, ?, ?, 'in', ?, ?, ?, 0, 1, ?)`,
           [generateId(), id, quantity, unitCost, totalCost, note || 'initial_stock', now]
         );
       }
@@ -156,6 +156,7 @@ export async function createWarehouseItem(data: WarehouseItemInput): Promise<War
       total_cost: totalCost,
       note,
       is_active: true,
+      synced: false,
       created_at: now,
       updated_at: now,
     };
@@ -191,6 +192,7 @@ export async function updateWarehouseItem(
 
     if (setClauses.length === 0) return;
 
+    setClauses.push('synced = 0');
     setClauses.push('updated_at = ?');
     values.push(now, itemId);
 
@@ -243,8 +245,8 @@ export async function addWarehouseStock(
 
       await db.runAsync(
         `INSERT INTO warehouse_movements
-          (id, warehouse_item_id, delta, movement_type, unit_cost, total_cost, note, created_at)
-         VALUES (?, ?, ?, 'in', ?, ?, ?, ?)`,
+          (id, warehouse_item_id, delta, movement_type, unit_cost, total_cost, note, synced, applied, created_at)
+         VALUES (?, ?, ?, 'in', ?, ?, ?, 0, 1, ?)`,
         [generateId(), itemId, quantity, unitCost, quantity * unitCost, cleanNote, now]
       );
 
@@ -298,8 +300,8 @@ export async function removeWarehouseStock(
 
       await db.runAsync(
         `INSERT INTO warehouse_movements
-          (id, warehouse_item_id, delta, movement_type, unit_cost, total_cost, note, created_at)
-         VALUES (?, ?, ?, 'out', ?, ?, ?, ?)`,
+          (id, warehouse_item_id, delta, movement_type, unit_cost, total_cost, note, synced, applied, created_at)
+         VALUES (?, ?, ?, 'out', ?, ?, ?, 0, 1, ?)`,
         [generateId(), itemId, -quantity, item.average_cost, quantity * item.average_cost, cleanNote, now]
       );
 
@@ -322,7 +324,7 @@ export async function deleteWarehouseItem(itemId: string): Promise<void> {
   return runSerialized(async () => {
     const db = await getDatabase();
     await db.runAsync(
-      "UPDATE warehouse_items SET is_active = 0, updated_at = datetime('now') WHERE id = ?",
+      "UPDATE warehouse_items SET is_active = 0, synced = 0, updated_at = datetime('now') WHERE id = ?",
       [itemId]
     );
   });

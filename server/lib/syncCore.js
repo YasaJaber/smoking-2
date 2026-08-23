@@ -11,12 +11,14 @@ const DATA_COLUMNS = {
   purchases: ['id', 'budget', 'spent', 'remaining', 'note', 'status', 'is_deleted', 'synced', 'created_at', 'updated_at'],
   purchase_items: ['id', 'purchase_id', 'product_id', 'product_name', 'category_id', 'cost_price', 'sell_price', 'quantity', 'total_cost', 'is_deleted', 'synced', 'created_at'],
   inventory_movements: ['id', 'product_id', 'delta', 'reason', 'reference_type', 'reference_id', 'note', 'synced', 'applied', 'created_at'],
+  warehouse_items: ['id', 'name', 'sku', 'note', 'is_active', 'synced', 'created_at', 'updated_at'],
+  warehouse_movements: ['id', 'warehouse_item_id', 'delta', 'movement_type', 'unit_cost', 'total_cost', 'note', 'synced', 'applied', 'created_at'],
 };
 
 const TABLES = Object.keys(DATA_COLUMNS);
 
 // Collections that carry an `updated_at` field get Last-Write-Wins protection.
-const LWW_TABLES = new Set(['categories', 'products', 'purchases']);
+const LWW_TABLES = new Set(['categories', 'products', 'purchases', 'warehouse_items']);
 
 /** Build a clean document containing only the known data fields. */
 function pickColumns(table, raw) {
@@ -103,6 +105,8 @@ async function runSync(db, body) {
   await applyIncoming(db, 'purchases', incoming.purchases, now, device);
   await applyIncoming(db, 'purchase_items', incoming.purchase_items, now, device);
   await applyIncoming(db, 'inventory_movements', incoming.inventory_movements, now, device);
+  await applyIncoming(db, 'warehouse_items', incoming.warehouse_items, now, device);
+  await applyIncoming(db, 'warehouse_movements', incoming.warehouse_movements, now, device);
 
   // Collect everything changed since `since` by OTHER devices.
   const out = {
@@ -113,6 +117,8 @@ async function runSync(db, body) {
     purchases: await pullChanges(db, 'purchases', since, device),
     purchase_items: await pullChanges(db, 'purchase_items', since, device),
     inventory_movements: await pullChanges(db, 'inventory_movements', since, device),
+    warehouse_items: await pullChanges(db, 'warehouse_items', since, device),
+    warehouse_movements: await pullChanges(db, 'warehouse_movements', since, device),
   };
 
   return { serverTime: now, changes: out };
